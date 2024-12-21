@@ -81,6 +81,6 @@ pub fn build(b: *std.Build) void {
     example.root_module.addImport("ui_lib", lib_module);
 
     const run_example = b.addRunArtifact(example);
-    const run_step = b.step("run-example", "Run example application");
+    const run_step = b.step("run-example-window", "Run example application that creates a window");
     run_step.dependOn(&run_example.step);
 }
