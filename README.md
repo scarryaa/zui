@@ -1,2 +1,2 @@
-# zig-ui-lib
+# zui
 Cross-platform UI Library for Zig.
