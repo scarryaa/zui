@@ -1,64 +1,112 @@
-const cocoa = @cImport({
-    @cInclude("objc/runtime.h");
-    @cInclude("objc/message.h");
-});
-
 const std = @import("std");
 const builtin = @import("builtin");
 
-const NSRect = extern struct {
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
-};
+// macOS-specific imports and definitions
+const cocoa = if (builtin.os.tag == .macos)
+    @cImport({
+        @cInclude("objc/runtime.h");
+        @cInclude("objc/message.h");
+    })
+else
+    undefined;
 
-// Helper functions for Objective-C runtime
-fn objc_getClass(name: [*:0]const u8) ?*anyopaque {
-    return cocoa.objc_getClass(name);
-}
+// Platform-specific types
+const NSRect = if (builtin.os.tag == .macos)
+    extern struct {
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    }
+else
+    undefined;
 
-fn objc_msgSend(obj: ?*anyopaque, sel: cocoa.SEL) ?*anyopaque {
-    const func: *const fn (?*anyopaque, cocoa.SEL) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
-    return @call(.auto, func, .{ obj, sel });
-}
+// macOS-specific helper functions and constants
+const objc_getClass = if (builtin.os.tag == .macos)
+    struct {
+        fn func(name: [*:0]const u8) ?*anyopaque {
+            return cocoa.objc_getClass(name);
+        }
+    }.func
+else
+    undefined;
 
-fn objc_msgSend_str(obj: ?*anyopaque, sel: cocoa.SEL, arg: [*:0]const u8) ?*anyopaque {
-    const func: *const fn (?*anyopaque, cocoa.SEL, [*:0]const u8) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
-    return @call(.auto, func, .{ obj, sel, arg });
-}
+const objc_msgSend = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL) ?*anyopaque {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
+            return @call(.auto, func_ptr, .{ obj, sel });
+        }
+    }.func
+else
+    undefined;
 
-fn objc_msgSend_rect(obj: ?*anyopaque, sel: cocoa.SEL, frame: NSRect, style: c_ulong, backing: c_ulong, defer_: bool) ?*anyopaque {
-    const func: *const fn (?*anyopaque, cocoa.SEL, NSRect, c_ulong, c_ulong, bool) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
-    return @call(.auto, func, .{ obj, sel, frame, style, backing, defer_ });
-}
+const objc_msgSend_str = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL, arg: [*:0]const u8) ?*anyopaque {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL, [*:0]const u8) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
+            return @call(.auto, func_ptr, .{ obj, sel, arg });
+        }
+    }.func
+else
+    undefined;
 
-fn objc_msgSend_bool(obj: ?*anyopaque, sel: cocoa.SEL, arg: bool) void {
-    const func: *const fn (?*anyopaque, cocoa.SEL, bool) callconv(.C) void = @ptrCast(&cocoa.objc_msgSend);
-    @call(.auto, func, .{ obj, sel, arg });
-}
+const objc_msgSend_rect = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL, frame: NSRect, style: c_ulong, backing: c_ulong, defer_: bool) ?*anyopaque {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL, NSRect, c_ulong, c_ulong, bool) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
+            return @call(.auto, func_ptr, .{ obj, sel, frame, style, backing, defer_ });
+        }
+    }.func
+else
+    undefined;
 
-fn objc_msgSend_void_id(obj: ?*anyopaque, sel: cocoa.SEL, arg: ?*anyopaque) void {
-    const func: *const fn (?*anyopaque, cocoa.SEL, ?*anyopaque) callconv(.C) void = @ptrCast(&cocoa.objc_msgSend);
-    @call(.auto, func, .{ obj, sel, arg });
-}
+const objc_msgSend_bool = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL, arg: bool) void {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL, bool) callconv(.C) void = @ptrCast(&cocoa.objc_msgSend);
+            @call(.auto, func_ptr, .{ obj, sel, arg });
+        }
+    }.func
+else
+    undefined;
 
-fn objc_msgSend_id(obj: ?*anyopaque, sel: cocoa.SEL, arg: ?*anyopaque) ?*anyopaque {
-    const func: *const fn (?*anyopaque, cocoa.SEL, ?*anyopaque) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
-    return @call(.auto, func, .{ obj, sel, arg });
-}
+const objc_msgSend_void_id = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL, arg: ?*anyopaque) void {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL, ?*anyopaque) callconv(.C) void = @ptrCast(&cocoa.objc_msgSend);
+            @call(.auto, func_ptr, .{ obj, sel, arg });
+        }
+    }.func
+else
+    undefined;
 
-fn objc_msgSend_init_window(obj: ?*anyopaque, sel: cocoa.SEL, frame: anytype, style: c_ulong, backing: c_ulong, defer_: bool) ?*anyopaque {
-    const func: *const fn (?*anyopaque, cocoa.SEL, @TypeOf(frame), c_ulong, c_ulong, bool) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
-    return @call(.auto, func, .{ obj, sel, frame, style, backing, defer_ });
-}
+const objc_msgSend_id = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL, arg: ?*anyopaque) ?*anyopaque {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL, ?*anyopaque) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
+            return @call(.auto, func_ptr, .{ obj, sel, arg });
+        }
+    }.func
+else
+    undefined;
+
+const objc_msgSend_init_window = if (builtin.os.tag == .macos)
+    struct {
+        fn func(obj: ?*anyopaque, sel: cocoa.SEL, frame: anytype, style: c_ulong, backing: c_ulong, defer_: bool) ?*anyopaque {
+            const func_ptr: *const fn (?*anyopaque, cocoa.SEL, @TypeOf(frame), c_ulong, c_ulong, bool) callconv(.C) ?*anyopaque = @ptrCast(&cocoa.objc_msgSend);
+            return @call(.auto, func_ptr, .{ obj, sel, frame, style, backing, defer_ });
+        }
+    }.func
+else
+    undefined;
 
 // Constants
-const NSWindowStyleMaskTitled: c_ulong = 1;
-const NSWindowStyleMaskClosable: c_ulong = 2;
-const NSWindowStyleMaskMiniaturizable: c_ulong = 4;
-const NSWindowStyleMaskResizable: c_ulong = 8;
-const NSBackingStoreBuffered: c_ulong = 2;
+const NSWindowStyleMaskTitled: c_ulong = if (builtin.os.tag == .macos) 1 else 0;
+const NSWindowStyleMaskClosable: c_ulong = if (builtin.os.tag == .macos) 2 else 0;
+const NSWindowStyleMaskMiniaturizable: c_ulong = if (builtin.os.tag == .macos) 4 else 0;
+const NSWindowStyleMaskResizable: c_ulong = if (builtin.os.tag == .macos) 8 else 0;
+const NSBackingStoreBuffered: c_ulong = if (builtin.os.tag == .macos) 2 else 0;
 
 pub const Window = struct {
     handle: ?*anyopaque,

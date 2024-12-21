@@ -11,20 +11,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // Add Objective-C support
+    // Basic C library linking for all platforms
     lib.linkLibC();
-    lib.linkFramework("Foundation");
-    lib.linkFramework("Cocoa");
-    lib.linkFramework("AppKit");
-
-    // Add SDK paths
-    const sdk_base = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
-    lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include" }) });
-    lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include/objc" }) });
-    lib.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "System/Library/Frameworks" }) });
-
-    // Enable Objective-C runtime
-    lib.linkSystemLibrary("objc");
 
     switch (target.result.os.tag) {
         .windows => {
@@ -36,7 +24,19 @@ pub fn build(b: *std.Build) void {
             lib.linkSystemLibrary("gtk+-3.0");
             lib.linkSystemLibrary("x11");
         },
-        .macos => {},
+        .macos => {
+            // Add Objective-C support only for macOS
+            lib.linkFramework("Foundation");
+            lib.linkFramework("Cocoa");
+            lib.linkFramework("AppKit");
+            lib.linkSystemLibrary("objc");
+
+            // Add SDK paths
+            const sdk_base = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
+            lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include" }) });
+            lib.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include/objc" }) });
+            lib.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "System/Library/Frameworks" }) });
+        },
         else => @panic("Unsupported platform"),
     }
 
@@ -54,20 +54,25 @@ pub fn build(b: *std.Build) void {
 
     const example = b.addExecutable(.{
         .name = "example",
-        .root_source_file = b.path("examples/basic.zig"),
+        .root_source_file = b.path("examples/window.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    // Add same Objective-C support to the example
+    // Add platform-specific configuration for the example
     example.linkLibC();
-    example.linkFramework("Foundation");
-    example.linkFramework("Cocoa");
-    example.linkFramework("AppKit");
-    example.linkSystemLibrary("objc");
-    example.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include" }) });
-    example.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include/objc" }) });
-    example.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "System/Library/Frameworks" }) });
+
+    if (target.result.os.tag == .macos) {
+        example.linkFramework("Foundation");
+        example.linkFramework("Cocoa");
+        example.linkFramework("AppKit");
+        example.linkSystemLibrary("objc");
+
+        const sdk_base = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk";
+        example.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include" }) });
+        example.addSystemIncludePath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "usr/include/objc" }) });
+        example.addSystemFrameworkPath(.{ .cwd_relative = b.pathJoin(&.{ sdk_base, "System/Library/Frameworks" }) });
+    }
 
     // Create module
     const lib_module = b.createModule(.{
